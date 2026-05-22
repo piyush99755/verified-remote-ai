@@ -1,22 +1,19 @@
-import google.generativeai as genai
+from google import genai
 import os
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
 
-api_key = os.getenv("GEMINI_API_KEY")
-
-print("API KEY LOADED:", api_key)
-
-
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
-model = genai.GenerativeModel("gemini-1.5-flash")
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY")
+)
 
 
 def analyze_job_with_ai(job_title, company, description):
 
     try:
+
         prompt = f"""
         Analyze this remote job posting.
 
@@ -25,16 +22,37 @@ def analyze_job_with_ai(job_title, company, description):
         Description: {description}
 
         Evaluate:
-        1. Scam likelihood
-        2. Job legitimacy
-        3. Remote job quality
-        4. Suspicious signals
-        5. Positive trust signals
+        - legitimacy
+        - scam risk
+        - job quality
+        - remote authenticity
+        - transparency
+
+        Return ONLY valid JSON in this format:
+
+        {{
+            "legitimacy": "HIGH/MEDIUM/LOW",
+            "scam_risk": "HIGH/MEDIUM/LOW",
+            "job_quality": "HIGH/MEDIUM/LOW",
+            "remote_authenticity": "HIGH/MEDIUM/LOW",
+            "transparency": "HIGH/MEDIUM/LOW",
+            "summary": "Short explanation"
+        }}
         """
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
+        )
 
-        return response.text
+        cleaned_response = response.text.strip()
+
+        parsed_response = json.loads(cleaned_response)
+
+        return parsed_response
 
     except Exception as e:
-        return f"AI Error: {str(e)}"
+
+        return {
+            "error": str(e)
+        }
